@@ -1,5 +1,10 @@
 MeBay NEWS
 
+Changes since 0.3:
+
+* Support for HTTP proxy; specified via the http_proxy environment
+  variable.
+
 Changes since 0.2:
 
 * Updated to support recent eBay HTML changes which integrated the
