@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 #
-# $Id: mebay.pl,v 1.6 2000/07/09 16:57:40 boyns Exp $
+# $Id: mebay.pl,v 1.7 2000/07/10 19:28:36 boyns Exp $
 #
 # Copyright (C) 2000 Gargola Software
 #
@@ -30,10 +30,12 @@ use Gtk;
 eval "require Gtk::Gdk::ImlibImage";
 require 'ctime.pl';
 
-my $version = "0.3";
+my $version = "0.3.1";
 my $debug = 0;
 my $mebay_dir = "$ENV{'HOME'}/.mebay";
 my $user_agent = "Mozilla/4.5 [en] (X11; I; Linux 2.2.14 i686; Nav)";
+my $http_proxy_host = undef;
+my $http_proxy_port = undef;
 
 my $signed_in = 0;
 my %ebay;
@@ -43,6 +45,21 @@ my %labels;
 my %buttons;
 
 print copyleft();
+
+if (defined($ENV{'http_proxy'}))
+{
+    if ($ENV{'http_proxy'} =~ m,http://([^/:]+)(:\d+)?(/.*)?,)
+    {
+	my ($host, $port, $path) = ($1, $2, $3);
+	$port =~ s/://;
+	$port = 80 unless $port;
+
+	$http_proxy_host = $host;
+	$http_proxy_port = $port;
+
+	print "using proxy $http_proxy_host:$http_proxy_port\n" if $debug;
+    }
+}
 
 Gtk->init;
 Gtk::Gdk::ImlibImage->init;
@@ -2021,8 +2038,18 @@ sub post
 	$content .= $_ . "=" . $data{$_};
     }
     my $content_length = length($content);
-    my $sock = xconnect($host, $port);
-    print $sock "POST $path HTTP/1.0\n";
+
+    my $sock;
+    if (defined($http_proxy_host) && defined($http_proxy_port))
+    {
+	$sock = xconnect($http_proxy_host, $http_proxy_port);
+	print $sock "POST http://$host:$port$path HTTP/1.0\n";
+    }
+    else
+    {
+	$sock = xconnect($host, $port);
+	print $sock "POST $path HTTP/1.0\n";
+    }
     if ($ebay{'cookie'} and $host =~ /ebay.com$/i)
     {
 	print $sock "Cookie: " . $ebay{'cookie'} . "\n";
@@ -2045,6 +2072,7 @@ sub post
 	if ($location =~ m,http://([^/:]+)(:\d+)?(/.*),)
 	{
 	    my ($host, $port, $path) = ($1, $2, $3);
+	    $port =~ s/://;
 	    $port = 80 unless $port;
 	    $html = get($host, $port, $path);
 	}
@@ -2058,8 +2086,18 @@ sub get
     my ($host, $port, $path) = @_;
     my $html;
 
-    my $sock = xconnect($host, $port);
-    print $sock "GET $path HTTP/1.0\n";
+    my $sock;
+    if (defined($http_proxy_host) && defined($http_proxy_port))
+    {
+	$sock = xconnect($http_proxy_host, $http_proxy_port);
+	print $sock "GET http://$host:$port$path HTTP/1.0\n";
+    }
+    else
+    {
+	$sock = xconnect($host, $port);
+	print $sock "GET $path HTTP/1.0\n";
+    }
+    
     print $sock "User-Agent: $user_agent\n";
     if ($ebay{'cookie'} and $host =~ /ebay.com$/i)
     {
@@ -2090,8 +2128,19 @@ sub get
 sub get_image
 {
     my($host, $port, $path, $out) = @_;
-    my $sock = xconnect($host, $port);
-    print $sock "GET $path HTTP/1.0\n";
+
+    my $sock;
+    if (defined($http_proxy_host) && defined($http_proxy_port))
+    {
+	$sock = xconnect($http_proxy_host, $http_proxy_port);
+	print $sock "GET http://$host:$port$path HTTP/1.0\n";
+    }
+    else
+    {
+	$sock = xconnect($host, $port);
+	print $sock "GET $path HTTP/1.0\n";
+    }
+
     print $sock "User-Agent: $user_agent\n";
     if ($ebay{'cookie'} && $host =~ /ebay.com$/i)
     {
