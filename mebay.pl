@@ -1,5 +1,7 @@
 #!/usr/bin/perl
 #
+# $Id: mebay.pl,v 1.2 2000/06/29 05:30:03 boyns Exp $
+#
 # Copyright (C) 2000 Gargola Software
 #
 # MeBay is free software; you can redistribute it and/or modify
@@ -458,7 +460,7 @@ sub update_mywatch
     my $index = -1;
     my %hash;
 
-    $html = get("cgi1.ebay.com", 80, "/aw-cgi/ebayISAPI.dll?MyeBayItemsTracking&userid=$ebay{'userid'}&pass=$ebay{'ciphertext'}&first=N&sellerSort=3&bidderSort=3&dayssince=2&p1=0&p2=0&p3=0&p4=0&p5=0");
+    $html = get("cgi1.ebay.com", 80, "/aw-cgi/ebayISAPI.dll?MyeBayItemsBiddingOn&userid=$ebay{'userid'}&pass=$ebay{'ciphertext'}&first=N&sellerSort=3&bidderSort=3&dayssince=2&p1=0&p2=0&p3=0&p4=0&p5=0&watchSort=3");
 
     $clist->clear();
 
@@ -478,7 +480,7 @@ sub update_mywatch
 	next if $td =~ /^$/; # checkbox
 	next if $td =~ /bid now/i;
 
-	if ($td =~ /^time left$/i)
+	if ($td =~ /^bid onthis item$/i)
 	{
 	    $index = 0;
 	    next;
