@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 #
-# $Id: mebay.pl,v 1.4 2000/06/30 15:35:34 boyns Exp $
+# $Id: mebay.pl,v 1.5 2000/07/08 21:03:21 boyns Exp $
 #
 # Copyright (C) 2000 Gargola Software
 #
@@ -31,7 +31,7 @@ use Gtk;
 eval "require Gtk::Gdk::ImlibImage";
 require 'ctime.pl';
 
-my $version = "0.2.1";
+my $version = "0.3*";
 my $debug = 0;
 my $mebay_dir = "$ENV{'HOME'}/.mebay";
 my $user_agent = "Mozilla/4.5 [en] (X11; I; Linux 2.2.14 i686; Nav)";
@@ -40,6 +40,8 @@ my $signed_in = 0;
 my %ebay;
 my %mybid_items;
 my %mywatch_items;
+my %labels;
+my %buttons;
 
 print copyleft();
 
@@ -305,6 +307,8 @@ sub nowatch
     foreach (@items)
     {
 	delete $mywatch_items{$_};
+	my $row = find_clist_item($mywatch_clist, $_);
+	$mywatch_clist->remove($row) if $row != -1;
     }
 }
 
@@ -404,6 +408,8 @@ sub update_mybid
 	if ($td =~ m,<a[^>]+>([^<]+)</a>,i)
 	{
 	    $anchor = $1;
+	    #print "anchor = $anchor\n";
+	    #last if $anchor =~ /items\s+i\'m\s+watching/i;
 	    next;
 	}
 	$td =~ s/<[^>]+>//g;
@@ -416,6 +422,7 @@ sub update_mybid
 	}
 	next if $index < 0;
 	last if $td =~ /^item$/i;
+	last if $td =~ /^items\s+i\'m\s+watching$/i;
 
 	$hash{$keys[$index++]} = $td;
 
@@ -512,12 +519,13 @@ sub update_mywatch
 
 sub update_search
 {
-    my ($clist, $type, $pattern) = @_;
+    my ($clist, $type, $pattern, $skip) = @_;
     my @keys = qw(item price bids ends);
     my $nkeys = scalar(@keys);
     my ($html, $td, $anchor, $row);
     my $index = -1;
     my %hash;
+    my ($found, $from, $to);
 
     $pattern =~ s/ /+/g;
 
@@ -525,6 +533,23 @@ sub update_search
     {
 	my $path = sprintf("/search/search.dll?MfcISAPICommand=GetResult&SortProperty=%s&ht=1&query=%s",
 			    $item_search{'type'}, $pattern);
+
+	if ($item_search{'_path'} ne $path)
+	{
+	    $item_search{'_path'} = $path;
+	    delete $item_search{'_pos'};
+	}
+	else
+	{
+	    $item_search{'_pos'} += $skip;
+	    delete $item_search{'_pos'} if $item_search{'_pos'} <= 0;
+	}
+
+	if (defined($item_search{'_pos'}))
+	{
+	    $path .= "&skip=" . $item_search{'_pos'};
+	}
+	
 	$html = get("search.ebay.com", 80, $path);
     }
     else
@@ -534,10 +559,40 @@ sub update_search
 			    $pattern,
 			    $completed_search{'type'},
 			    "%5Ba%5D"); # [a] or [d]
+
+	if ($completed_search{'path'} ne $pattern)
+	{
+	    $completed_search{'_path'} = $pattern;
+	    delete $completed_search{'_pos'};
+	}
+	else
+	{
+	    $completed_search{'_pos'} += $skip;
+	    delete $completed_search{'_pos'} if $completed_search{'_pos'} <= 0;
+	}
+
+	if (defined($completed_search{'_pos'}))
+	{
+	    $path .= "&skip=" . $completed_search{'_pos'};
+	}
+
 	$html = get("search-completed.ebay.com", 80, $path);
     }
 
+    $labels{"${type}_status"}->set_text("");
     $clist->clear();
+
+    if ($html =~ /(\d+)\s+(items\s+found\s+for.*?showing\s+items)\s+(\d+)\s+to\s+(\d+)\./is)
+    {
+	$found = $1;
+	$from = $3;
+	$to = $4;
+		
+	my $l = "$1 $2 $3 to $4";
+	$l =~ s/<[^>]+>//g;
+	$l =~ s/\n//g;
+	$labels{"${type}_status"}->set_text($l);
+    }
 
     while ($html =~ m,<td[^>]*>(.+?)</td>,igs)
     {
@@ -561,8 +616,19 @@ sub update_search
 	    next;
 	}
 
+    	if ($td =~ /(\d+) items found for.*?items\s+(\d+)\s+to\s+(\d+)/is)
+	{
+	    $found = $1;
+	    $from = $2;
+	    $to = $3;
+	    
+	    $labels{"${type}_status"}->set_text($td);
+	    next;
+	}
+	
 	next if $index < 0;
 	last if $td =~ /^item$/i;
+	last if $index == 0 && $td =~ /^Note:/;
 
 	$hash{$keys[$index++]} = $td;
 
@@ -580,6 +646,15 @@ sub update_search
 	    $anchor = "";
 	    %hash = ();
 	}
+    }
+
+    $buttons{"${type}_prev_page"}->hide;
+    $buttons{"${type}_next_page"}->hide;
+
+    if ($found > 50)
+    {
+	$buttons{"${type}_prev_page"}->show if $from > 50;
+	$buttons{"${type}_next_page"}->show if $to < $found;
     }
 }
 
@@ -1066,6 +1141,13 @@ sub create_search_page
 
     $entry->signal_connect("activate", sub { update_search($clist, "current", $entry->get_text()); });
 
+    my $prev_page = new Gtk::Button("Previous Page");
+    $prev_page->signal_connect("clicked", sub { update_search($clist, "current", $entry->get_text(), -50); });
+    my $next_page = new Gtk::Button("Next Page");
+    $next_page->signal_connect("clicked", sub { update_search($clist, "current", $entry->get_text(), 50); });
+    $buttons{'current_prev_page'} = $prev_page;
+    $buttons{'current_next_page'} = $next_page;
+
     $hbox->pack_start($label, 0, 0, 0);
     $hbox->pack_start($entry, 1, 1, 0);
     $hbox->pack_start($sortmenu, 0, 0, 0);
@@ -1080,11 +1162,17 @@ sub create_search_page
     my $bbox = new Gtk::HBox(0, 0);
     $bbox->show;
     $bbox->pack_start($search, 1, 0, 0);
+    $bbox->pack_start($prev_page, 0, 0, 2);
+    $bbox->pack_start($next_page, 0, 0, 2);
 
     $vbox->pack_start($header, 0, 1, 5);
     $vbox->pack_start($window, 1, 1, 0);
     $vbox->pack_start($hbox, 0, 1, 0);
     $vbox->pack_start($bbox, 0, 1, 5);
+
+    $labels{'current_status'} = new Gtk::Label("");
+    $labels{'current_status'}->show;
+    $vbox->pack_start($labels{'current_status'}, 0, 1, 1);
 
     $clist->show;
     $window->show;
@@ -1144,6 +1232,13 @@ sub create_completed_page
 
     $entry->signal_connect("activate", sub { update_search($clist, "completed", $entry->get_text()); });
 
+    my $prev_page = new Gtk::Button("Previous Page");
+    $prev_page->signal_connect("clicked", sub { update_search($clist, "completed", $entry->get_text(), -50); });
+    my $next_page = new Gtk::Button("Next Page");
+    $next_page->signal_connect("clicked", sub { update_search($clist, "completed", $entry->get_text(), 50); });
+    $buttons{'completed_prev_page'} = $prev_page;
+    $buttons{'completed_next_page'} = $next_page;
+
     $hbox->pack_start($label, 0, 0, 0);
     $hbox->pack_start($entry, 1, 1, 0);
     $hbox->pack_start($sortmenu, 0, 0, 0);
@@ -1158,11 +1253,17 @@ sub create_completed_page
     my $bbox = new Gtk::HBox(0, 0);
     $bbox->show;
     $bbox->pack_start($search, 1, 0, 0);
+    $bbox->pack_start($prev_page, 0, 0, 2);
+    $bbox->pack_start($next_page, 0, 0, 2);
 
     $vbox->pack_start($header, 0, 1, 5);
     $vbox->pack_start($window, 1, 1, 0);
     $vbox->pack_start($hbox, 0, 1, 0);
     $vbox->pack_start($bbox, 0, 1, 5);
+
+    $labels{'completed_status'} = new Gtk::Label("");
+    $labels{'completed_status'}->show;
+    $vbox->pack_start($labels{'completed_status'}, 0, 1, 1);
 
     $clist->show;
     $window->show;
@@ -1273,6 +1374,10 @@ sub create_bidder_page
     $vbox->pack_start($hbox, 0, 1, 0);
     $vbox->pack_start($bbox, 0, 1, 5);
 
+    $labels{'bids_status'} = new Gtk::Label("");
+    $labels{'bids_status'}->show;
+    $vbox->pack_start($labels{'bids_status'}, 0, 1, 1);
+
     $clist->show;
     $window->show;
 
@@ -1369,6 +1474,10 @@ sub create_seller_page
     $vbox->pack_start($hbox, 0, 1, 0);
     $vbox->pack_start($bbox, 0, 1, 5);
 
+    $labels{'auctions_status'} = new Gtk::Label("");
+    $labels{'auctions_status'}->show;
+    $vbox->pack_start($labels{'auctions_status'}, 0, 1, 1);
+
     $clist->show;
     $window->show;
 
@@ -1422,6 +1531,8 @@ sub update_listing
 			0);
     }
 
+    $labels{"${type}_status"}->set_text("");
+
     $html = get("cgi3.ebay.com", 80, $path);
     $clist->clear();
 
@@ -1442,6 +1553,12 @@ sub update_listing
 	$td =~ s/<[^>]+>//g;
 	$td =~ s/&nbsp;//g;
 	$td =~ s/&pound;/\#/g;
+
+	if ($td =~ /\d+ items found for/)
+	{
+	    $labels{"${type}_status"}->set_text($td);
+	    next;
+	}
 
 	next if $index < 0;
 	#last if $td =~ /^item$/i;
@@ -1521,8 +1638,6 @@ sub update_feedback
 	$td =~ s/\n/ /g;
 	$td =~ s/^\s+//g;
 	$td =~ s/\s+$//g;
-
-	#print "td = $td\n";
 
 	if ($td =~ /(positive|neutral|negative|total|bid retractions)/i)
 	{
@@ -1677,6 +1792,10 @@ sub create_purchased_page
     $vbox->pack_start($hbox, 0, 1, 0);
     $vbox->pack_start($bbox, 0, 1, 5);
 
+    $labels{'purchased_status'} = new Gtk::Label("");
+    $labels{'purchased_status'}->show;
+    $vbox->pack_start($labels{'purchased_status'}, 0, 1, 1);
+
     $clist->show;
     $window->show;
 
@@ -1689,6 +1808,12 @@ sub update_purchased_state
 
     $purchased_db{$item} = $state;
     $purchased_x->sync;
+
+    my $row = find_clist_item($purchased_clist, $item);
+    if ($row != -1)
+    {
+	$purchased_clist->set_text($row, 4, $purchased_states[$state]);
+    }
 }
 
 sub create_sold_page
@@ -1744,6 +1869,10 @@ sub create_sold_page
     $vbox->pack_start($window, 1, 1, 0);
     $vbox->pack_start($hbox, 0, 1, 0);
     $vbox->pack_start($bbox, 0, 1, 5);
+
+    $labels{'sold_status'} = new Gtk::Label("");
+    $labels{'sold_status'}->show;
+    $vbox->pack_start($labels{'sold_status'}, 0, 1, 1);
 
     $clist->show;
     $window->show;
@@ -1835,6 +1964,19 @@ sub update_notes
     }
     $notes_x->sync;
 }
+
+sub find_clist_item
+{
+    my ($clist, $item) = @_;
+
+    for (my $i = 0; $i < $clist->rows; $i++)
+    {
+        return $i if $clist->get_text($i, 0) eq $item;
+    }
+
+    -1;
+}
+
 
 # sub create_prefs_page
 # {
