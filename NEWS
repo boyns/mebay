@@ -6,6 +6,12 @@ Changes since 0.2:
   bid and watch lists into a single page.  MeBay will still display
   them as separate tabs.
 
+* Support for next and previous pages in search results.
+
+* Better search result and UI feedback.
+
+* Bug fixes.
+
 Changes since 0.1:
 
 * Manage Items tab for keeping track of past auctions.  Several states can be 

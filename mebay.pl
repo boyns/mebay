@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 #
-# $Id: mebay.pl,v 1.5 2000/07/08 21:03:21 boyns Exp $
+# $Id: mebay.pl,v 1.6 2000/07/09 16:57:40 boyns Exp $
 #
 # Copyright (C) 2000 Gargola Software
 #
@@ -25,13 +25,12 @@ use DB_File;
 use Socket;
 use FileHandle;
 use Getopt::Long;
-use Getopt::Long;
 use Time::Local;
 use Gtk;
 eval "require Gtk::Gdk::ImlibImage";
 require 'ctime.pl';
 
-my $version = "0.3*";
+my $version = "0.3";
 my $debug = 0;
 my $mebay_dir = "$ENV{'HOME'}/.mebay";
 my $user_agent = "Mozilla/4.5 [en] (X11; I; Linux 2.2.14 i686; Nav)";
