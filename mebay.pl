@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 #
-# $Id: mebay.pl,v 1.2 2000/06/29 05:30:03 boyns Exp $
+# $Id: mebay.pl,v 1.3 2000/06/29 14:21:07 boyns Exp $
 #
 # Copyright (C) 2000 Gargola Software
 #
@@ -31,7 +31,7 @@ use Gtk;
 eval "require Gtk::Gdk::ImlibImage";
 require 'ctime.pl';
 
-my $version = "0.2";
+my $version = "0.2.1";
 my $debug = 0;
 my $mebay_dir = "$ENV{'HOME'}/.mebay";
 my $user_agent = "Mozilla/4.5 [en] (X11; I; Linux 2.2.14 i686; Nav)";
@@ -48,7 +48,7 @@ Gtk::Gdk::ImlibImage->init;
 
 mkdir($mebay_dir, 0700);
 
-my $root_win = Gtk::Gdk::Window->new_foreign(Gtk::Gdk->ROOT_WINDOW());
+#my $root_win = Gtk::Gdk::Window->new_foreign(Gtk::Gdk->ROOT_WINDOW());
 
 my $mw = new Gtk::Window('toplevel');
 $mw->set_title("MeBay");
