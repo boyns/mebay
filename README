@@ -1,0 +1,46 @@
+MeBay 0.2 README
+Copyright (C) 2000 Gargola Software
+
+MeBay - client for eBay, "Your Personal Trading Community"
+        http://www.ebay.com/
+
+Features:
+
+  * Written in Perl Gtk
+
+  * GUI interface to "My eBay" bid and watch items
+
+  * Add and remove items from "My eBay" watch list
+
+  * Manage past auctions by tracking them using several states.
+
+  * Search for items by name, bidder, and seller with flexible sorting
+
+  * Search completed auctions
+
+  * Display item image when possible
+
+  * Freely available under the GNU General Public License
+
+Requirements:
+
+  MeBay requires Perl 5.005 and the Gtk-Perl module with imlib
+  support.  Perl and Gtk-Perl are available here:
+
+      http://www.perl.com/
+      http://www.cpan.org/modules/by-module/Gtk/
+
+  Debian Linux users will want to install the libgtk-imlib-perl package
+  from the potato (or newer) distribution.
+
+Download:
+
+  MeBay is available at http://mebay.doit.org/
+
+For more information about eBay and "My eBay", please visit these
+pages at eBay:
+
+  http://www.ebay.com/
+  http://pages.ebay.com/help/basics/n-is-ebay-safe.html
+
+Send suggestions and bug reports to <boyns@doit.org>

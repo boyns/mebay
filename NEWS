@@ -1,0 +1,14 @@
+MeBay NEWS
+
+Changes since 0.1:
+
+* Manage Items tab for keeping track of past auctions.  Several states can be 
+  assigned to items to help keep track of what to do after an auction.
+  The files ~/.mebay/purchased.db and ~/.mebay/sold.db are used to
+  store buyer and seller states.
+
+* Notes can be stored for individual items.  The file ~/.mebay/notes.db
+  is used to store item notes.
+
+* runs with "use strict"
+
