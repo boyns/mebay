@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 #
-# $Id: mebay.pl,v 1.3 2000/06/29 14:21:07 boyns Exp $
+# $Id: mebay.pl,v 1.4 2000/06/30 15:35:34 boyns Exp $
 #
 # Copyright (C) 2000 Gargola Software
 #
@@ -555,7 +555,7 @@ sub update_search
 	next if $td =~ /^$/; # checkbox
 	next if $td =~ /bid now/i;
 
-	if ($td =~ /^\s*(ends|start time)\s*$/i)
+	if ($td =~ /^\s*(ends?|start time)\s*(pdt)?\s*$/i)
 	{
 	    $index = 0;
 	    next;
